@@ -31,16 +31,21 @@ def convert_xml(input_xml):
             out_product = ET.SubElement(output_root, "product")
             
             # Map basic product fields
-            out_product.set("id", product.find("code").text)
-            out_product.set("productCode", product.find("ws_code").text)
+            ET.SubElement(out_product, "id").text = product.find("code").text
+            ET.SubElement(out_product, "productCode").text = product.find("ws_code").text
             barcode = product.find("barcode").text or ""
             ET.SubElement(out_product, "barcode").text = barcode
             ET.SubElement(out_product, "main_category").text = product.find("cat1name").text
             ET.SubElement(out_product, "top_category").text = product.find("cat2name").text
             ET.SubElement(out_product, "sub_category").text = product.find("cat2name").text
-            ET.SubElement(out_product, "sub_category_")
+            ET.SubElement(out_product, "sub_category_").text = product.find("cat3name").text if product.find("cat3name") is not None else ""
             ET.SubElement(out_product, "categoryID").text = product.find("cat2code").text
-            ET.SubElement(out_product, "category").text = product.find("category_path").text
+            # Create category path with 3 levels: cat1name >>> cat2name >>> cat3name
+            cat1 = product.find("cat1name").text if product.find("cat1name") is not None else ""
+            cat2 = product.find("cat2name").text if product.find("cat2name") is not None else ""
+            cat3 = product.find("cat3name").text if product.find("cat3name") is not None else ""
+            category_path = f"{cat1} >>> {cat2} >>> {cat3}".strip(" >>> ")
+            ET.SubElement(out_product, "category").text = category_path
             ET.SubElement(out_product, "active").text = "1"
             ET.SubElement(out_product, "brandID").text = "0"  # Assuming default brand ID
             ET.SubElement(out_product, "brand").text = product.find("brand").text
@@ -141,11 +146,15 @@ def save_to_desktop(xml_content, filename="stilmondeneme.xml"):
         print(f"Error saving file: {e}")
 
 def main():
+    print("XML Converter başlatılıyor...")
     url = "https://stilimon.com/xml/?R=9412&K=21c1&AltUrun=1&TamLink=1&Dislink=1&Imgs=1&start=0&limit=99999&pass=Z9K0aQM9"
+    print(f"URL'den XML alınıyor: {url}")
     input_xml = fetch_xml_from_url(url)
     if input_xml:
+        print("XML başarıyla alındı, dönüştürülüyor...")
         output_xml = convert_xml(input_xml)
         if output_xml:
+            print("XML dönüştürme başarılı!")
             # FTP configuration - Bu bilgileri kendi hosting bilgilerinizle değiştirin
             ftp_config = {
                 'host': 'ftp.eterella.com',  # FTP sunucu adresi
@@ -155,6 +164,7 @@ def main():
                 'filename': 'stilmondeneme.xml'  # Uzak dosya adı
             }
             
+            print("FTP'ye yükleniyor...")
             # FTP'ye yükle
             if upload_to_ftp(output_xml, ftp_config):
                 print("XML dosyası başarıyla hostinge yüklendi!")
